@@ -95,3 +95,9 @@ The API deliberately returns simple role/content dictionaries suitable for a
 chat completion request. It does not call a language model, choose tools, or
 decide which memories are relevant. Those behaviors belong to the application
 or future Memory components.
+
+## Conversation action memory
+
+`memory.conversation.ConversationStore` also persists agent actions in `conversation_events` alongside its existing conversation tables. `record_event(text, kind='event', metadata=None)` writes a timestamped event immediately. `recall_events(query='', kind='event', limit=8)` returns relevant/recent events scoped to the active conversation. This is bounded lexical retrieval and recency, not semantic embedding recall. Events survive restarts without appearing as invented user messages.
+
+Interactive uses `kind='lighting'` to retain effect choices, brief reasons, personal signal meanings and tool outcomes, including when a following LLM reply fails. The ordinary chat window and its turn limit remain independent of these stored records.

@@ -54,6 +54,15 @@ class ConversationStore:
                 "ON conversation_turns (conversation_id, id DESC)"
             )
             db.execute(
+                "CREATE TABLE IF NOT EXISTS conversation_events ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "conversation_id TEXT NOT NULL REFERENCES conversations(id), "
+                "kind TEXT NOT NULL, content TEXT NOT NULL, metadata TEXT NOT NULL DEFAULT '{}', "
+                "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+            )
+            db.execute("CREATE INDEX IF NOT EXISTS conversation_events_order "
+                       "ON conversation_events (conversation_id, kind, id DESC)")
+            db.execute(
                 "INSERT OR IGNORE INTO conversations (id, title) VALUES (?, ?)",
                 (self.conversation_id, self.default_title),
             )
@@ -94,3 +103,35 @@ class ConversationStore:
                     (active_conversation, exchange_id, "assistant", assistant_text),
                 ],
             )
+
+    def record_event(self, text: str, *, kind: str = 'event', metadata: dict | None = None) -> None:
+        """Persist an agent action alongside conversation history, without inventing dialogue."""
+        import json
+        if not isinstance(text, str) or not text.strip() or len(text) > 32000:
+            raise ValueError('Event text must contain 1–32000 characters')
+        if not isinstance(kind, str) or not 1 <= len(kind) <= 64:
+            raise ValueError('Event kind must contain 1–64 characters')
+        encoded = json.dumps(metadata or {}, ensure_ascii=False, allow_nan=False)
+        if len(encoded) > 64000:
+            raise ValueError('Event metadata exceeds 64000 characters')
+        with self._connect() as db:
+            db.execute('INSERT INTO conversation_events (conversation_id, kind, content, metadata) '
+                       'VALUES (?, ?, ?, ?)', (self.conversation_id, kind, text, encoded))
+
+    def recall_events(self, query: str = '', *, kind: str = 'event', limit: int = 8) -> list[dict]:
+        """Recall related/recent actions from this conversation, including after restart."""
+        import json
+        import re
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError('Event recall limit must be 1–20')
+        terms = list(dict.fromkeys(re.findall(r'\w+', query.casefold())))[:24]
+        # Parameterized LIKE search; escape its wildcard characters in query terms.
+        matches = ['%' + term.replace('_', r'\_') + '%' for term in terms]
+        score = ' + '.join("CASE WHEN lower(content) LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END" for _ in matches) or '0'
+        with self._connect() as db:
+            rows = db.execute(
+                f'SELECT content, metadata, created_at FROM conversation_events '
+                f'WHERE conversation_id = ? AND kind = ? ORDER BY ({score}) DESC, id DESC LIMIT ?',
+                (self.conversation_id, kind, *matches, limit),
+            ).fetchall()
+        return [{'text': row[0], 'metadata': json.loads(row[1]), 'created_at': row[2]} for row in rows]
