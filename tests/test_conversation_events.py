@@ -24,3 +24,22 @@ def test_recall_ranks_matching_reason_before_newest_event(tmp_path):
     store.record_event('I chose red', kind='lighting')
     assert 'pink' in store.recall_events('pink', kind='lighting')[0]['text']
     assert len(store.recall_events("' OR 1=1 --", kind='lighting', limit=1)) == 1
+
+
+def test_action_can_be_recorded_before_first_exchange_in_new_conversation(tmp_path):
+    path = tmp_path / 'conversation.db'
+    store = ConversationStore(path)
+    store.conversation_id = 'new-conversation'
+    store.record_event('Selected a quiet colour', kind='lighting', metadata={'reason': 'quiet'})
+    store.add_exchange('Hello', 'Welcome')
+    restarted = ConversationStore(path)
+    restarted.conversation_id = 'new-conversation'
+    assert restarted.recall_events(kind='lighting')[0]['metadata']['reason'] == 'quiet'
+    assert restarted.recent()[-1]['content'] == 'Welcome'
+
+
+def test_empty_recall_query_returns_latest_events(tmp_path):
+    store = ConversationStore(tmp_path / 'conversation.db')
+    store.record_event('First')
+    store.record_event('Second')
+    assert [item['text'] for item in store.recall_events()] == ['Second', 'First']

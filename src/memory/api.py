@@ -1,6 +1,6 @@
 """The memory contract: what every AGi memory backend must honor.
 
-Grace (PC, AIVA, ROS2) and Aiko (Jetson, non-ROS) share this interface.
+AIVA (PC, AIVA, ROS2) and Aiko (Jetson, non-ROS) share this interface.
 Backends store `Entry` dicts; the only writer is the owning agent process
 (single-writer design - concurrency is the server's job, not the backend's).
 """
@@ -13,7 +13,7 @@ KINDS = ('event', 'observation', 'dialogue', 'study', 'summary', 'reflection')
 
 ENTRY_SCHEMA = {
     'ts': float,        # unix seconds
-    'agent': str,       # 'grace' | 'aiko' | ...
+    'agent': str,       # 'aiva' | 'aiko' | ...
     'kind': str,        # one of KINDS
     'text': str,        # the content
     'tags': list,       # short strings, e.g. ['drawing', 'mug']
