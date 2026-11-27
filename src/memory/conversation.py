@@ -115,6 +115,8 @@ class ConversationStore:
         if len(encoded) > 64000:
             raise ValueError('Event metadata exceeds 64000 characters')
         with self._connect() as db:
+            db.execute('INSERT OR IGNORE INTO conversations (id, title) VALUES (?, ?)',
+                       (self.conversation_id, self.default_title))
             db.execute('INSERT INTO conversation_events (conversation_id, kind, content, metadata) '
                        'VALUES (?, ?, ?, ?)', (self.conversation_id, kind, text, encoded))
 
@@ -127,11 +129,12 @@ class ConversationStore:
         terms = list(dict.fromkeys(re.findall(r'\w+', query.casefold())))[:24]
         # Parameterized LIKE search; escape its wildcard characters in query terms.
         matches = ['%' + term.replace('_', r'\_') + '%' for term in terms]
-        score = ' + '.join("CASE WHEN lower(content) LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END" for _ in matches) or '0'
+        score = ' + '.join("CASE WHEN lower(content) LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END" for _ in matches)
+        order = f'({score}) DESC, id DESC' if matches else 'id DESC'
         with self._connect() as db:
             rows = db.execute(
                 f'SELECT content, metadata, created_at FROM conversation_events '
-                f'WHERE conversation_id = ? AND kind = ? ORDER BY ({score}) DESC, id DESC LIMIT ?',
+                f'WHERE conversation_id = ? AND kind = ? ORDER BY {order} LIMIT ?',
                 (self.conversation_id, kind, *matches, limit),
             ).fetchall()
         return [{'text': row[0], 'metadata': json.loads(row[1]), 'created_at': row[2]} for row in rows]

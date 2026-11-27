@@ -1,8 +1,8 @@
 # Memory
 
-Memory is the shared memory component for AGi agents, including **Grace** (hosted
+Memory is the shared memory component for AGi agents, including **AIVA** (hosted
 by AIVA) and **Aiko**. It owns reusable memory APIs and storage; AIVA remains
-the runtime that connects Grace's chat, ROS topics, and user interface.
+the runtime that connects AIVA's chat, ROS topics, and user interface.
 
 ## Current scope
 
@@ -10,8 +10,8 @@ Memory currently provides two distinct pieces:
 
 - A general memory API with journal and SQLite backends for structured entries.
 - `memory.conversation.ConversationStore`, a SQLite store for paired user and
-  assistant turns. AIVA uses this store for Grace's chat history and adds its
-  own Canvas-specific study and context behavior in `GraceMemory`.
+  assistant turns. AIVA uses this store for AIVA's chat history and adds its
+  own Canvas-specific study and context behavior in `AivaMemory`.
 
 Conversation history is persistent. `recent()` returns only the configured
 number of latest exchanges for active context; it does not delete older turns
@@ -41,12 +41,12 @@ import os
 from memory import open_memory
 
 agi_home = os.environ.get('AGI_HOME', '~/.agi')
-mem = open_memory(f'{agi_home}/profile/grace.jsonl')   # or grace.db
-mem.append({'agent': 'grace', 'kind': 'dialogue',
+mem = open_memory(f'{agi_home}/profile/aiva.jsonl')   # or aiva.db
+mem.append({'agent': 'aiva', 'kind': 'dialogue',
             'text': 'OppaAI asked me to draw a mug',
             'tags': ['drawing'], 'importance': 0.7})
 mem.search('mug drawing')
-mem.recent(agent='grace', limit=20)
+mem.recent(agent='aiva', limit=20)
 ```
 
 ## Python package
@@ -82,8 +82,8 @@ import os
 from memory.conversation import ConversationStore
 
 agi_home = os.environ.get("AGI_HOME", "~/.agi")
-store = ConversationStore(f"{agi_home}/profile/grace_memory.sqlite3", max_turns=8)
-store.add_exchange("Hello Grace", "Hi!")
+store = ConversationStore(f"{agi_home}/profile/aiva_memory.sqlite3", max_turns=8)
+store.add_exchange("Hello AIVA", "Hi!")
 recent = store.recent()
 ```
 

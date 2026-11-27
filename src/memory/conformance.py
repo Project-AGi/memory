@@ -23,7 +23,7 @@ def run_all(name, factory):
     backend = factory()
     try:
         # ---- normalize + append -------------------------------------
-        stored = backend.append({'agent': 'grace', 'kind': 'observation',
+        stored = backend.append({'agent': 'aiva', 'kind': 'observation',
                                  'text': 'Drew a mug on the canvas today',
                                  'tags': ['drawing', 'mug'], 'importance': 0.8})
         assert stored['ts'] > 0 and stored['kind'] == 'observation'
